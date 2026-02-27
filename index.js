@@ -9,7 +9,6 @@ app.get("/elo", async (req, res) => {
     const API_KEY = process.env.FACEIT_API_KEY;
     const nickname = "_-noX"; 
 
-    // 1. Oyuncu bilgilerini çek
     const playerRes = await fetch(`https://open.faceit.com/data/v4/players?nickname=${nickname}&game=cs2`, {
       headers: { Authorization: `Bearer ${API_KEY}` },
     });
@@ -20,7 +19,6 @@ app.get("/elo", async (req, res) => {
     const elo = playerData.games.cs2.faceit_elo;
     const level = playerData.games.cs2.skill_level;
 
-    // 2. Son 5 maçın detaylı sonucunu çek
     const historyRes = await fetch(`https://open.faceit.com/data/v4/players/${playerId}/history?game=cs2&limit=5`, {
       headers: { Authorization: `Bearer ${API_KEY}` },
     });
@@ -29,18 +27,16 @@ app.get("/elo", async (req, res) => {
     if (historyRes.ok) {
         const historyData = await historyRes.json();
         
-        // Her maçın sonucunu hesapla
         const results = historyData.items.map(match => {
             const teamA = match.results.score["faction1"];
             const teamB = match.results.score["faction2"];
             const winner = teamA > teamB ? "faction1" : "faction2";
-            
-            // Oyuncunun hangi takımda olduğunu bul ve kazanıp kazanmadığını kontrol et
             const playerTeam = match.teams.faction1.players.some(p => p.player_id === playerId) ? "faction1" : "faction2";
-            
             return playerTeam === winner ? "W" : "L";
         });
-        matchResults = results.join("");
+        
+        // .reverse() ekledim, böylece en son maçın EN BAŞTA görünecek (WLLLL gibi)
+        matchResults = results.reverse().join(""); 
     }
 
     res.send(`📊 ELO: ${elo} | Level: ${level} | Son 5: ${matchResults} | 🎮 Nick: ${nickname}`);
