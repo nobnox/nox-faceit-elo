@@ -8,28 +8,29 @@ const PLAYER_ID = process.env.PLAYER_ID;
 
 app.get("/elo", async (req, res) => {
   try {
-    const response = await fetch(
-      `https://open.faceit.com/data/v4/players/${PLAYER_ID}/history?game=cs2&limit=5`,
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` },
-      }
-    );
-
-    const data = await response.json();
-
-    let wins = 0;
-    let losses = 0;
-
-    data.items.forEach((match) => {
-      const isWin = match.results.winner === match.teams.faction1.faction_id;
-      if (isWin) wins++;
-      else losses++;
+    // 1. Güncel ELO ve Seviye Bilgisini Al
+    const playerRes = await fetch(`https://open.faceit.com/data/v4/players/${PLAYER_ID}`, {
+      headers: { Authorization: `Bearer ${API_KEY}` },
     });
+    const playerData = await playerRes.json();
+    const currentElo = playerData.games.cs2.faceit_elo;
+    const level = playerData.games.cs2.skill_level;
 
-    res.send(`🔥 Son 5 maç: ${wins}W - ${losses}L | Nox grind devam ediyor 💀`);
+    // 2. Son Maçlardaki ELO Değişimini Hesapla (Bugün/Son Maçlar)
+    const historyRes = await fetch(`https://open.faceit.com/data/v4/players/${PLAYER_ID}/history?game=cs2&limit=1`, {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
+    const historyData = await historyRes.json();
+    
+    // Not: Faceit API anlık "bugün +25" vermez, ancak son maç verisiyle kıyaslama yapılabilir.
+    // Şimdilik en temiz haliyle ELO ve Level yazdıralım:
+    
+    res.send(`📊 ELO: ${currentElo} | Level: ${level} | 🎮 Nick: ${playerData.nickname}`);
+
   } catch (error) {
-    res.send("ELO verisi alınamadı.");
+    console.error(error);
+    res.send("Faceit verisi şu an alınamadı, API anahtarını veya Player ID'yi kontrol et.");
   }
 });
 
-app.listen(3000);
+app.listen(3000, () => console.log("Bot hazır!"));
