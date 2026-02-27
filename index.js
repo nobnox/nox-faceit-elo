@@ -4,25 +4,28 @@ import fetch from "node-fetch";
 const app = express();
 const port = process.env.PORT || 3000;
 
-const API_KEY = process.env.FACEIT_API_KEY;
-const PLAYER_ID = process.env.PLAYER_ID;
-
 app.get("/elo", async (req, res) => {
   try {
-    const response = await fetch(`https://open.faceit.com/data/v4/players/${PLAYER_ID}`, {
+    const API_KEY = process.env.FACEIT_API_KEY;
+    // PLAYER_ID yerine direkt kullanıcı adını buraya yazıyoruz ki hata payı kalmasın
+    const nickname = "_-noX"; 
+
+    const response = await fetch(`https://open.faceit.com/data/v4/players?nickname=${nickname}&game=cs2`, {
       headers: { Authorization: `Bearer ${API_KEY}` },
     });
     
-    if (!response.ok) throw new Error("API Hatası");
+    if (!response.ok) {
+        const errorData = await response.json();
+        return res.send(`Faceit Hatası: ${errorData.errors[0].message}`);
+    }
     
     const data = await response.json();
     const elo = data.games.cs2.faceit_elo;
     const level = data.games.cs2.skill_level;
-    const nick = data.nickname;
 
-    res.send(`📊 ELO: ${elo} | Level: ${level} | 🎮 Nick: ${nick}`);
+    res.send(`📊 ELO: ${elo} | Level: ${level} | 🎮 Nick: ${nickname}`);
   } catch (error) {
-    res.send("❌ Veri alınamadı. Anahtar veya ID hatalı.");
+    res.send("❌ Sistemsel bir hata oluştu.");
   }
 });
 
